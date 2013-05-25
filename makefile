@@ -11,6 +11,9 @@ clean:
 execute: bin/tradutorMIPS
 		bin/tradutorMIPS
 		
+run: bin/tradutorMIPS
+		bin/tradutorMIPS
+		
 debug: clean
 		gcc src/tradutorMIPS.c -g -o bin/tradutorMIPS
 		gdb bin/tradutorMIPS
