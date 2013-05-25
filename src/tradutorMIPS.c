@@ -2,41 +2,63 @@
 #include <stdlib.h>
 #include <string.h>
 
-//Registradores
-unsigned char R_ZERO[5] = {0, 0, 0, 0, 0}; //00
-unsigned char R_AT[5]   = {0, 0, 0, 0, 1}; //01
-unsigned char R_V0[5]   = {0, 0, 0, 1, 0}; //02
-unsigned char R_V1[5]   = {0, 0, 0, 1, 1}; //03
-unsigned char R_A0[5]   = {0, 0, 1, 0, 0}; //04
-unsigned char R_A1[5]   = {0, 0, 1, 0, 1}; //05
-unsigned char R_A2[5]   = {0, 0, 1, 1, 0}; //06
-unsigned char R_A3[5]   = {0, 0, 1, 1, 1}; //07
-unsigned char R_T0[5]   = {0, 1, 0, 0, 0}; //08
-unsigned char R_T1[5]   = {0, 1, 0, 0, 1}; //09
-unsigned char R_T2[5]   = {0, 1, 0, 1, 0}; //10
-unsigned char R_T3[5]   = {0, 1, 0, 1, 1}; //11
-unsigned char R_T4[5]   = {0, 1, 1, 0, 0}; //12
-unsigned char R_T5[5]   = {0, 1, 1, 0, 1}; //13
-unsigned char R_T6[5]   = {0, 1, 1, 1, 0}; //14
-unsigned char R_T7[5]   = {0, 1, 1, 1, 1}; //15
-unsigned char R_S0[5]   = {1, 0, 0, 0, 0}; //16
-unsigned char R_S1[5]   = {1, 0, 0, 0, 1}; //17
-unsigned char R_S2[5]   = {1, 0, 0, 1, 0}; //18
-unsigned char R_S3[5]   = {1, 0, 0, 1, 1}; //19
-unsigned char R_S4[5]   = {1, 0, 1, 0, 0}; //20
-unsigned char R_S5[5]   = {1, 0, 1, 0, 1}; //21
-unsigned char R_S6[5]   = {1, 0, 1, 1, 0}; //22
-unsigned char R_S7[5]   = {1, 0, 1, 1, 1}; //23
-unsigned char R_T8[5]   = {1, 1, 0, 0, 0}; //24
-unsigned char R_T9[5]   = {1, 1, 0, 0, 1}; //25
-unsigned char R_K0[5]   = {1, 1, 0, 1, 0}; //26
-unsigned char R_K1[5]   = {1, 1, 0, 1, 1}; //27
-unsigned char R_GP[5]   = {1, 1, 1, 0, 0}; //28
-unsigned char R_SP[5]   = {1, 1, 1, 0, 1}; //29
-unsigned char R_FP[5]   = {1, 1, 1, 1, 0}; //30
-unsigned char R_RA[5]   = {1, 1, 1, 1, 1}; //31
+//Instruções e funções
+
+unsigned char ADD[6] = {1, 0, 0, 0, 0, 0}; //32
+
+
+//Matriz de registradores [num_reg][bytes]
+
+char REG_MNE[32][6] = {"$zero", "$at", "$v0", "$v1", "$a0", "$a1", "$a2", "$a3",
+                         "$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7", 
+                         "$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7",
+                         "$t8", "$t9", "$k0", "$k1", "$gp", "$sp", "$fp", "$ra"};
+                       
+unsigned char REG[32][5] = {0, 0, 0, 0, 0, //00 = $zero / 
+                            0, 0, 0, 0, 1,
+                            0, 0, 0, 1, 0,
+                            0, 0, 0, 1, 1,
+                            0, 0, 1, 0, 0,
+                            0, 0, 1, 0, 1,
+                            0, 0, 1, 1, 0,
+                            0, 0, 1, 1, 1,
+                            0, 1, 0, 0, 0,
+                            0, 1, 0, 0, 1,
+                            0, 1, 0, 1, 0,
+                            0, 1, 0, 1, 1,
+                            0, 1, 1, 0, 0,
+                            0, 1, 1, 0, 1,
+                            0, 1, 1, 1, 0,
+                            0, 1, 1, 1, 1,
+                            1, 0, 0, 0, 0,
+                            1, 0, 0, 0, 1,
+                            1, 0, 0, 1, 0,
+                            1, 0, 0, 1, 1,
+                            1, 0, 1, 0, 0,
+                            1, 0, 1, 0, 1,
+                            1, 0, 1, 1, 0,
+                            1, 0, 1, 1, 1,
+                            1, 1, 0, 0, 0,
+                            1, 1, 0, 0, 1,
+                            1, 1, 0, 1, 0,
+                            1, 1, 0, 1, 1,
+                            1, 1, 1, 0, 0,
+                            1, 1, 1, 0, 1,
+                            1, 1, 1, 1, 0,
+                            1, 1, 1, 1, 1};
 
 unsigned char palavra[32];
+
+/*
+Função auxiliar que converte uma cadeia de caracteres em minúsculo
+*/
+void toLowerCase(char *s)
+{
+	for(; *s; ++s)
+	{
+		*s = tolower(*s);
+	}
+}
 
 void inicializaPalavra()
 {
@@ -55,6 +77,9 @@ void escrevePalavra()
 	printf("\n");
 }
 
+/*
+Escreve o valor contido em imediato nos últimos bits da palavra
+*/
 unsigned char setImediato(int imediato)
 {
 	unsigned char bit = 31;	
@@ -68,41 +93,151 @@ unsigned char setImediato(int imediato)
 	}
 }
 
-void toLowerCase(char *s)
+/*
+Verifica se a string registrador possui o nome de um registrador valido.
+Em caso positivo retorna 1 e numero do registrador em bytes.
+Em caso negativo retorna 0 e bytes é completamente zerado.
+*/
+unsigned char getRegistradorBytes(char *registrador, unsigned char *bytes)
 {
-	for(; *s; ++s)
+	unsigned char i = 0;
+	//Inicializa o vetor de saída com valor zero.
+	memset(bytes, 0, 5);
+	
+	if(strcmp(registrador, "$0")==0)
 	{
-		*s = tolower(*s);
+		memcpy(bytes, REG[0], 5);
+		return 1;
 	}
+	
+	for(i=0; i<32; i++)
+	{
+		if(strcmp(registrador, REG_MNE[i])==0)
+		{
+			memcpy(bytes, REG[i], 5);
+			return 1;
+		}
+	}
+	
+	return 0;
 }
 
+
+/*
+Separa a instrução continda em *linha
+Em *instrução e três operandos *op1,*op2 e *op3.
+Caso um operando não exista ele ficará com a string vazia.
+Obs: Esse método não verifica a sintáxe.
+*/
 void divideInstrucao(char *linha, char *instrucao, char *op1, char *op2, char *op3)
 {
 	//Separa a linha em instrução e três operandos
-	unsigned char i = 0;
+	unsigned char fc = 0, lc = 0;
 	strcpy(instrucao, "");
 	strcpy(op1, "");
 	strcpy(op2, "");
 	strcpy(op3, "");
 	toLowerCase(linha);
 	//Pega a instrucao. Para no primeiro espaço
-	while(linha[i] && linha[i] != 32)
+	while(linha[lc] && linha[lc] != ' ')
 	{
-		i++;
+		lc++;
 	}
-	strncpy(instrucao, linha, i);
+	//Copia a substring linha do inicio até lc (LastCharacter).
+	strncpy(instrucao, linha, lc);
+	
+	//Procura um caractere valido para op1
+	fc = lc + 1;
+	while(linha[fc] && (linha[fc] == ',' || linha[fc] == ' '))
+	{
+		fc++;
+	}
+	lc = fc + 1;
+	while(linha[lc] && linha[lc] != ',' && linha[lc] != ' ')
+	{
+		lc++;
+	}
+	strncpy(op1, linha + fc, lc - fc);
+	
+  //Procura um caractere valido para op2
+	fc = lc + 1;
+	while(linha[fc] && (linha[fc] == ',' || linha[fc] == ' '))
+	{
+		fc++;
+	}
+	lc = fc + 1;
+	while(linha[lc] && linha[lc] != ',' && linha[lc] != ' ' && linha[lc] != '(')
+	{
+		lc++;
+	}
+	strncpy(op2, linha + fc, lc - fc);
+	
+	//Procura um caractere valido para op3
+	fc = lc + 1;
+	while(linha[fc] && (linha[fc] == ',' || linha[fc] == ' ' || linha[fc] == '('))
+	{
+		fc++;
+	}
+	lc = fc + 1;
+	while(linha[lc] && linha[lc] != ',' && linha[lc] != ' ' && linha[lc] != ')')
+	{
+		lc++;
+	}
+	strncpy(op3, linha + fc, lc - fc);
 }
 
-void processarLinha(char *linha)
+void palavraTipoR(unsigned char *rs, unsigned char *rt, unsigned char *rd, unsigned char *func)
+{		
+		//memcpy(palavra, opcode, 6); -> opcode = 0; OK
+		memcpy(palavra + 6, rs, 5);
+		memcpy(palavra + 11, rt, 5);
+		memcpy(palavra + 16, rd, 5);
+		memcpy(palavra + 26, func, 6);
+}
+
+/*
+Processa a linha.
+Retorna 0 em caso de falha, 1 em caso de sucesso.
+*/
+unsigned char processarLinha(char *linha)
 {
-	char *instrucao, *op1, *op2, *op3;
+	char instrucao[10], op1[5], op2[5], op3[5];
+	unsigned char bRS[5], bRT[5], bRD[5];
+	printf("%s\n", linha);		
+	inicializaPalavra();
 	divideInstrucao(linha, instrucao, op1, op2, op3);
-	printf("%s\n%s\n%s\n%s\n", instrucao, op1, op2, op3);
+	//Verifica o tipo de operação
+	if(strcmp(instrucao, "add") == 0)
+	{
+		//Tipo R: op = 0; rs = op2; rt = op3; rd = op1; shmat = 0; func  = 32;
+		
+		//rs
+		if(!getRegistradorBytes(op2, bRS))
+		{
+			return 0;
+		}
+		
+		//rt
+		if(!getRegistradorBytes(op3, bRT))
+		{
+			return 0;
+		}
+		
+		//rd
+		if(!getRegistradorBytes(op1, bRT))
+		{
+			return 0;
+		}
+		
+		palavraTipoR(bRS, bRT, bRD, ADD);
+	}
+	//printf("%s\nIns: '%s'\nOp1: '%s'\nOp2: '%s'\nOp3: '%s'\n", linha, instrucao, op1, op2, op3);
 }
 
 int main(int argc, char *argv[5]) {
-	char line[100] = "ADD $t0, $s0, $s1";
-	inicializaPalavra();
+	char line[100] = "add $t0, $s2, $t0";
+	int i = 0;
 	processarLinha(line);
 	escrevePalavra();
+	return 0;
 };
