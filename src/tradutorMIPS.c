@@ -203,7 +203,7 @@ unsigned char processarLinha(char *linha)
 {
 	char instrucao[10], op1[5], op2[5], op3[5];
 	unsigned char bRS[5], bRT[5], bRD[5];
-	printf("%s\n", linha);		
+	printf("%s\n", linha);
 	inicializaPalavra();
 	divideInstrucao(linha, instrucao, op1, op2, op3);
 	//Verifica o tipo de operação
