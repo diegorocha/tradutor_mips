@@ -10,11 +10,11 @@ unsigned char ADD[6] = {1, 0, 0, 0, 0, 0}; //32
 //Matriz de registradores [num_reg][bytes]
 
 char REG_MNE[32][6] = {"$zero", "$at", "$v0", "$v1", "$a0", "$a1", "$a2", "$a3",
-                         "$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7", 
+                         "$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7",
                          "$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7",
                          "$t8", "$t9", "$k0", "$k1", "$gp", "$sp", "$fp", "$ra"};
-                       
-unsigned char REG[32][5] = {0, 0, 0, 0, 0, //00 = $zero / 
+
+unsigned char REG[32][5] = {0, 0, 0, 0, 0, //00 = $zero /
                             0, 0, 0, 0, 1,
                             0, 0, 0, 1, 0,
                             0, 0, 0, 1, 1,
@@ -82,7 +82,7 @@ Escreve o valor contido em imediato nos últimos bits da palavra
 */
 unsigned char setImediato(int imediato)
 {
-	unsigned char bit = 31;	
+	unsigned char bit = 31;
 	int num = imediato;
 	//Converte para binario atraves das divisoes sucessivas
 	while(imediato > 0)
@@ -103,13 +103,13 @@ unsigned char getRegistradorBytes(char *registrador, unsigned char *bytes)
 	unsigned char i = 0;
 	//Inicializa o vetor de saída com valor zero.
 	memset(bytes, 0, 5);
-	
+
 	if(strcmp(registrador, "$0")==0)
 	{
 		memcpy(bytes, REG[0], 5);
 		return 1;
 	}
-	
+
 	for(i=0; i<32; i++)
 	{
 		if(strcmp(registrador, REG_MNE[i])==0)
@@ -118,7 +118,7 @@ unsigned char getRegistradorBytes(char *registrador, unsigned char *bytes)
 			return 1;
 		}
 	}
-	
+
 	return 0;
 }
 
@@ -145,7 +145,7 @@ void divideInstrucao(char *linha, char *instrucao, char *op1, char *op2, char *o
 	}
 	//Copia a substring linha do inicio até lc (LastCharacter).
 	strncpy(instrucao, linha, lc);
-	
+
 	//Procura um caractere valido para op1
 	fc = lc + 1;
 	while(linha[fc] && (linha[fc] == ',' || linha[fc] == ' '))
@@ -158,8 +158,8 @@ void divideInstrucao(char *linha, char *instrucao, char *op1, char *op2, char *o
 		lc++;
 	}
 	strncpy(op1, linha + fc, lc - fc);
-	
-  //Procura um caractere valido para op2
+
+	//Procura um caractere valido para op2
 	fc = lc + 1;
 	while(linha[fc] && (linha[fc] == ',' || linha[fc] == ' '))
 	{
@@ -171,7 +171,7 @@ void divideInstrucao(char *linha, char *instrucao, char *op1, char *op2, char *o
 		lc++;
 	}
 	strncpy(op2, linha + fc, lc - fc);
-	
+
 	//Procura um caractere valido para op3
 	fc = lc + 1;
 	while(linha[fc] && (linha[fc] == ',' || linha[fc] == ' ' || linha[fc] == '('))
@@ -187,7 +187,7 @@ void divideInstrucao(char *linha, char *instrucao, char *op1, char *op2, char *o
 }
 
 void palavraTipoR(unsigned char *rs, unsigned char *rt, unsigned char *rd, unsigned char *func)
-{		
+{
 		//memcpy(palavra, opcode, 6); -> opcode = 0; OK
 		memcpy(palavra + 6, rs, 5);
 		memcpy(palavra + 11, rt, 5);
@@ -203,39 +203,39 @@ unsigned char processarLinha(char *linha)
 {
 	char instrucao[10], op1[5], op2[5], op3[5];
 	unsigned char bRS[5], bRT[5], bRD[5];
-	printf("%s\n", linha);		
+	printf("%s\n", linha);
 	inicializaPalavra();
 	divideInstrucao(linha, instrucao, op1, op2, op3);
+
 	//Verifica o tipo de operação
 	if(strcmp(instrucao, "add") == 0)
 	{
 		//Tipo R: op = 0; rs = op2; rt = op3; rd = op1; shmat = 0; func  = 32;
-		
+
 		//rs
 		if(!getRegistradorBytes(op2, bRS))
 		{
 			return 0;
 		}
-		
+
 		//rt
 		if(!getRegistradorBytes(op3, bRT))
 		{
 			return 0;
 		}
-		
+
 		//rd
 		if(!getRegistradorBytes(op1, bRT))
 		{
 			return 0;
 		}
-		
 		palavraTipoR(bRS, bRT, bRD, ADD);
 	}
 	//printf("%s\nIns: '%s'\nOp1: '%s'\nOp2: '%s'\nOp3: '%s'\n", linha, instrucao, op1, op2, op3);
 }
 
 int main(int argc, char *argv[5]) {
-	char line[100] = "add $t0, $s2, $t0";
+	char line[100] = "add $t5, $s2, $t4";
 	int i = 0;
 	processarLinha(line);
 	escrevePalavra();
