@@ -9,9 +9,18 @@ FILE *fOutput;
 unsigned char newLine = 0;
 unsigned char palavra[32];
 
-//Instruções e funções
+//Instruções Tipo R
 
-unsigned char ADD[6] = {1, 0, 0, 0, 0, 0}; //32
+char R_MNE[8][4] = {"sll", "srl", "jr", "add", "sub", "and", "or", "slt"};
+
+unsigned char R_FUNC[8][6] = {0, 0, 0, 0, 0, 0, //0
+															0, 0, 0, 0, 1, 0, //2
+															0, 0, 0, 1, 0, 0, //8
+															1, 0, 0, 0, 0, 0, //32 IMPLEMENTADO
+															1, 0, 0, 0, 1, 0, //34
+															1, 0, 0, 1, 0, 0, //36
+															1, 0, 0, 1, 0, 1, //37
+															1, 0, 1, 0, 1, 0}; //42
 
 
 //Matriz de registradores [num_reg][bytes]
@@ -151,7 +160,6 @@ unsigned char getRegistradorBytes(char *registrador, unsigned char *bytes)
 
 	if(strcmp(registrador, "$0")==0)
 	{
-		//memcpy(bytes, REG[0], 5);
 		copiaBits(REG[0], 0, 5, bytes, 0);
 		return 1;
 	}
@@ -160,8 +168,6 @@ unsigned char getRegistradorBytes(char *registrador, unsigned char *bytes)
 	{
 		if(strcmp(registrador, REG_MNE[i])==0)
 		{
-			printf("Achado %s em %d\n", registrador, i);
-			//memcpy(bytes, REG[i], 5);
 			copiaBits(REG[i], 0, 5, bytes, 0);
 			return 1;
 		}
@@ -236,12 +242,6 @@ void divideInstrucao(char *linha, char *instrucao, char *op1, char *op2, char *o
 
 void palavraTipoR(unsigned char *rs, unsigned char *rt, unsigned char *rd, unsigned char *func)
 {
-		//memcpy(palavra, opcode, 6); -> opcode = 0; OK
-		/*memcpy(palavra + 6, rs, 5);
-		memcpy(palavra + 11, rt, 5);
-		memcpy(palavra + 16, rd, 5);
-		memcpy(palavra + 26, func, 6);*/
-		
 		copiaBits(rs, 0, 5, palavra, 6);
 		copiaBits(rt, 0, 5, palavra, 11);
 		copiaBits(rd, 0, 5, palavra, 16);
@@ -256,6 +256,7 @@ unsigned char processarLinha(char *linha)
 {
 	char instrucao[10], op1[5], op2[5], op3[5];
 	unsigned char bRS[5], bRT[5], bRD[5];
+	unsigned char i = 0;
 	
 	printf("%s", linha);
 	
@@ -264,29 +265,32 @@ unsigned char processarLinha(char *linha)
 	printf("Ins: '%s'\nOp1: '%s'\nOp2: '%s'\nOp3: '%s'\n", instrucao, op1, op2, op3);
 	//printf("add? %d\n", strcmp(instrucao, "add"));
 
-	//Verifica o tipo de operação
-	if(strcmp(instrucao, "add") == 0)
+	//Verifica se a instrução é do tipo R
+	for(i = 0; i<8; i++)
 	{
-		//Tipo R: op = 0; rs = op2; rt = op3; rd = op1; shmat = 0; func  = 32;
-
-		//rs
-		if(!getRegistradorBytes(op2, bRS))
+		printf("Comparando %s e %s\n", instrucao, R_MNE[i]);
+		if(strcmp(instrucao, R_MNE[i]) == 0)
 		{
-			return 0;
-		}
+			//Tipo R: op = 0; rs = op2; rt = op3; rd = op1; shmat = 0; func  = 6 bits;
+			//rs
+			if(!getRegistradorBytes(op2, bRS))
+			{
+				return 0;
+			}
 
-		//rt
-		if(!getRegistradorBytes(op3, bRT))
-		{
-			return 0;
-		}
+			//rt
+			if(!getRegistradorBytes(op3, bRT))
+			{
+				return 0;
+			}
 
-		//rd
-		if(!getRegistradorBytes(op1, bRD))
-		{
-			return 0;
+			//rd
+			if(!getRegistradorBytes(op1, bRD))
+			{
+				return 0;
+			}
+			palavraTipoR(bRS, bRT, bRD, R_FUNC[i]);
 		}
-		palavraTipoR(bRS, bRT, bRD, ADD);
 	}
 }
 
