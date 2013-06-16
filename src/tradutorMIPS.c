@@ -1,6 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+
+//
+FILE *fInput;
+FILE *fOutput;
+unsigned char newLine = 0;
+unsigned char palavra[32];
 
 //Instruções e funções
 
@@ -47,7 +54,17 @@ unsigned char REG[32][5] = {0, 0, 0, 0, 0, //00 = $zero /
                             1, 1, 1, 1, 0,
                             1, 1, 1, 1, 1};
 
-unsigned char palavra[32];
+
+
+void escreveRegistrador(unsigned char *reg)
+{
+	unsigned int i = 0;
+	for(i = 0; i<5; i++)
+	{
+		printf("%c", reg[i] + 48);
+	}
+	puts("\n");
+}
 
 /*
 Função auxiliar que converte uma cadeia de caracteres em minúsculo
@@ -58,6 +75,31 @@ void toLowerCase(char *s)
 	{
 		*s = tolower(*s);
 	}
+}
+
+void copiaBits(unsigned char *origem, unsigned char inicio, unsigned char qtd, unsigned char *destino, unsigned char inicioDestino)
+{
+	unsigned char i = 0;
+	unsigned char fim = inicio + qtd;
+	unsigned char destinoB = inicioDestino;
+	for(i=inicio; i<fim; i++)
+	{
+		destino[destinoB] = origem[i];
+		destinoB++;
+	}
+}
+
+void copiaString(char *origem, char *destino, unsigned char inicio, unsigned char qtd)
+{
+	unsigned char i = 0;
+	unsigned char fim = inicio + qtd;
+	unsigned char destinoC = 0;
+	for(i=inicio; i<fim; i++)
+	{
+		destino[destinoC] = origem[i];
+		destinoC++;
+	}
+	destino[destinoC] = '\0';
 }
 
 void inicializaPalavra()
@@ -72,9 +114,12 @@ void escrevePalavra()
 	for(i=0; i<32; i++)
 	{
 		//Adiciona 48 ao valor contido no vetor, para ser representado como o ASCII '0' ou '1'
-		printf("%c", palavra[i] + 48);
+		fprintf(fOutput, "%c", palavra[i] + 48);
 	}
-	printf("\n");
+	if(newLine)
+	{
+		fputs("\n", fOutput);
+	}
 }
 
 /*
@@ -106,7 +151,8 @@ unsigned char getRegistradorBytes(char *registrador, unsigned char *bytes)
 
 	if(strcmp(registrador, "$0")==0)
 	{
-		memcpy(bytes, REG[0], 5);
+		//memcpy(bytes, REG[0], 5);
+		copiaBits(REG[0], 0, 5, bytes, 0);
 		return 1;
 	}
 
@@ -114,11 +160,13 @@ unsigned char getRegistradorBytes(char *registrador, unsigned char *bytes)
 	{
 		if(strcmp(registrador, REG_MNE[i])==0)
 		{
-			memcpy(bytes, REG[i], 5);
+			printf("Achado %s em %d\n", registrador, i);
+			//memcpy(bytes, REG[i], 5);
+			copiaBits(REG[i], 0, 5, bytes, 0);
 			return 1;
 		}
 	}
-
+	
 	return 0;
 }
 
@@ -144,7 +192,7 @@ void divideInstrucao(char *linha, char *instrucao, char *op1, char *op2, char *o
 		lc++;
 	}
 	//Copia a substring linha do inicio até lc (LastCharacter).
-	strncpy(instrucao, linha, lc);
+	copiaString(linha, instrucao, 0, lc);
 
 	//Procura um caractere valido para op1
 	fc = lc + 1;
@@ -157,7 +205,7 @@ void divideInstrucao(char *linha, char *instrucao, char *op1, char *op2, char *o
 	{
 		lc++;
 	}
-	strncpy(op1, linha + fc, lc - fc);
+	copiaString(linha, op1, fc, lc - fc);
 
 	//Procura um caractere valido para op2
 	fc = lc + 1;
@@ -166,11 +214,11 @@ void divideInstrucao(char *linha, char *instrucao, char *op1, char *op2, char *o
 		fc++;
 	}
 	lc = fc + 1;
-	while(linha[lc] && linha[lc] != ',' && linha[lc] != ' ' && linha[lc] != '(')
+	while(linha[lc] && linha[lc] != ',' && linha[lc] != ' ' && linha[lc] != '(' && linha[lc] != '\n')
 	{
 		lc++;
 	}
-	strncpy(op2, linha + fc, lc - fc);
+	copiaString(linha, op2, fc, lc - fc);
 
 	//Procura um caractere valido para op3
 	fc = lc + 1;
@@ -179,20 +227,25 @@ void divideInstrucao(char *linha, char *instrucao, char *op1, char *op2, char *o
 		fc++;
 	}
 	lc = fc + 1;
-	while(linha[lc] && linha[lc] != ',' && linha[lc] != ' ' && linha[lc] != ')')
+	while(linha[lc] && linha[lc] != ',' && linha[lc] != ' ' && linha[lc] != ')' && linha[lc] != '\n')
 	{
 		lc++;
 	}
-	strncpy(op3, linha + fc, lc - fc);
+	copiaString(linha, op3, fc, lc - fc);
 }
 
 void palavraTipoR(unsigned char *rs, unsigned char *rt, unsigned char *rd, unsigned char *func)
 {
 		//memcpy(palavra, opcode, 6); -> opcode = 0; OK
-		memcpy(palavra + 6, rs, 5);
+		/*memcpy(palavra + 6, rs, 5);
 		memcpy(palavra + 11, rt, 5);
 		memcpy(palavra + 16, rd, 5);
-		memcpy(palavra + 26, func, 6);
+		memcpy(palavra + 26, func, 6);*/
+		
+		copiaBits(rs, 0, 5, palavra, 6);
+		copiaBits(rt, 0, 5, palavra, 11);
+		copiaBits(rd, 0, 5, palavra, 16);
+		copiaBits(func, 0, 6, palavra, 26);
 }
 
 /*
@@ -203,9 +256,13 @@ unsigned char processarLinha(char *linha)
 {
 	char instrucao[10], op1[5], op2[5], op3[5];
 	unsigned char bRS[5], bRT[5], bRD[5];
-	printf("%s\n", linha);
+	
+	printf("%s", linha);
+	
 	inicializaPalavra();
 	divideInstrucao(linha, instrucao, op1, op2, op3);
+	printf("Ins: '%s'\nOp1: '%s'\nOp2: '%s'\nOp3: '%s'\n", instrucao, op1, op2, op3);
+	//printf("add? %d\n", strcmp(instrucao, "add"));
 
 	//Verifica o tipo de operação
 	if(strcmp(instrucao, "add") == 0)
@@ -225,19 +282,54 @@ unsigned char processarLinha(char *linha)
 		}
 
 		//rd
-		if(!getRegistradorBytes(op1, bRT))
+		if(!getRegistradorBytes(op1, bRD))
 		{
 			return 0;
 		}
 		palavraTipoR(bRS, bRT, bRD, ADD);
 	}
-	//printf("%s\nIns: '%s'\nOp1: '%s'\nOp2: '%s'\nOp3: '%s'\n", linha, instrucao, op1, op2, op3);
 }
 
-int main(int argc, char *argv[5]) {
-	char line[100] = "add $t5, $s2, $t4";
-	int i = 0;
-	processarLinha(line);
-	escrevePalavra();
+int main(int argc, char **argv) {
+	char linha[100];
+	char inputFilePath;
+	
+	//Tratamento dos argumentos
+	if(argc < 3)
+	{
+		fprintf(stderr, "Argumentos invalidos.\nUso: tradutorMIPS INPUTFILE OUTPUTFILE [--newline]\n\tINPUTFILE: Caminho para o arquivo de entrada\n\tOUTPUTFILE: Caminho onde será salvo o arquivo de saida, se já existir será sobreescrito.\n\t--newline: Opção que habilita a quebra de linha ao final de cada palavra.\n");
+		return EINVAL;  //Invalid argument
+	}
+	
+	//Arquivo de leitura
+	fInput = fopen(argv[1], "r");
+	if(fInput == NULL)
+	{
+		fprintf(stderr, "Houve um erro na leitura do arquivo '%s'\n%s\n", argv[1], strerror(errno));
+		return errno;
+	}
+	
+	//Arquivo de saida
+	fOutput = fopen(argv[2], "w+");
+	if(fOutput == NULL)
+	{
+		fprintf(stderr, "Houve um erro na escrita do arquivo '%s'\n%s\n", argv[2], strerror(errno));
+		return errno;
+	}
+	
+	//Trata o argumento --newline //somente na posição 4!
+	if(argc > 3)
+	{
+		//Só seta o valor 1 se a strcmp retornar 0
+		newLine = !strcmp(argv[3], "--newline");	
+	}
+	
+	while(fgets(linha, 100, fInput) != NULL )
+	{
+		processarLinha(linha);
+		escrevePalavra();
+	}
+	fclose(fInput);
+	fclose(fOutput);
 	return 0;
 };
