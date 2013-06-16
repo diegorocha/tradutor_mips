@@ -3,68 +3,64 @@
 #include <string.h>
 #include <errno.h>
 
-//
+//Variáveis globais
 FILE *fInput;
 FILE *fOutput;
 unsigned char newLine = 0;
 unsigned char palavra[32];
 
 //Instruções Tipo R
-
 char R_MNE[8][4] = {"sll", "srl", "jr", "add", "sub", "and", "or", "slt"};
+unsigned char R_FUNC[8][6] = {0, 0, 0, 0, 0, 0, //00 = sll
+															0, 0, 0, 0, 1, 0, //02 = srl
+															0, 0, 0, 1, 0, 0, //08 = jr
+															1, 0, 0, 0, 0, 0, //32 = add
+															1, 0, 0, 0, 1, 0, //34 = sub
+															1, 0, 0, 1, 0, 0, //36 = and
+															1, 0, 0, 1, 0, 1, //37 = or
+															1, 0, 1, 0, 1, 0};//42 = slt
 
-unsigned char R_FUNC[8][6] = {0, 0, 0, 0, 0, 0, //0
-															0, 0, 0, 0, 1, 0, //2
-															0, 0, 0, 1, 0, 0, //8
-															1, 0, 0, 0, 0, 0, //32 IMPLEMENTADO
-															1, 0, 0, 0, 1, 0, //34
-															1, 0, 0, 1, 0, 0, //36
-															1, 0, 0, 1, 0, 1, //37
-															1, 0, 1, 0, 1, 0}; //42
 
-
-//Matriz de registradores [num_reg][bytes]
-
+//Registradores [num_reg][bytes]
 char REG_MNE[32][6] = {"$zero", "$at", "$v0", "$v1", "$a0", "$a1", "$a2", "$a3",
                          "$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7",
                          "$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7",
                          "$t8", "$t9", "$k0", "$k1", "$gp", "$sp", "$fp", "$ra"};
-
-unsigned char REG[32][5] = {0, 0, 0, 0, 0, //00 = $zero /
-                            0, 0, 0, 0, 1,
-                            0, 0, 0, 1, 0,
-                            0, 0, 0, 1, 1,
-                            0, 0, 1, 0, 0,
-                            0, 0, 1, 0, 1,
-                            0, 0, 1, 1, 0,
-                            0, 0, 1, 1, 1,
-                            0, 1, 0, 0, 0,
-                            0, 1, 0, 0, 1,
-                            0, 1, 0, 1, 0,
-                            0, 1, 0, 1, 1,
-                            0, 1, 1, 0, 0,
-                            0, 1, 1, 0, 1,
-                            0, 1, 1, 1, 0,
-                            0, 1, 1, 1, 1,
-                            1, 0, 0, 0, 0,
-                            1, 0, 0, 0, 1,
-                            1, 0, 0, 1, 0,
-                            1, 0, 0, 1, 1,
-                            1, 0, 1, 0, 0,
-                            1, 0, 1, 0, 1,
-                            1, 0, 1, 1, 0,
-                            1, 0, 1, 1, 1,
-                            1, 1, 0, 0, 0,
-                            1, 1, 0, 0, 1,
-                            1, 1, 0, 1, 0,
-                            1, 1, 0, 1, 1,
-                            1, 1, 1, 0, 0,
-                            1, 1, 1, 0, 1,
-                            1, 1, 1, 1, 0,
-                            1, 1, 1, 1, 1};
-
+unsigned char REG[32][5] = {0, 0, 0, 0, 0, //00 = $zero
+                            0, 0, 0, 0, 1, //01 = $at
+                            0, 0, 0, 1, 0, //02 = $v0
+                            0, 0, 0, 1, 1, //03 = $v1
+                            0, 0, 1, 0, 0, //04 = $a0
+                            0, 0, 1, 0, 1, //05 = $a1
+                            0, 0, 1, 1, 0, //06 = $a2
+                            0, 0, 1, 1, 1, //07 = $a3
+                            0, 1, 0, 0, 0, //08 = $t0
+                            0, 1, 0, 0, 1, //09 = $t1
+                            0, 1, 0, 1, 0, //10 = $t2
+                            0, 1, 0, 1, 1, //11 = $t3
+                            0, 1, 1, 0, 0, //12 = $t4
+                            0, 1, 1, 0, 1, //13 = $t5
+                            0, 1, 1, 1, 0, //14 = $t6
+                            0, 1, 1, 1, 1, //15 = $t7
+                            1, 0, 0, 0, 0, //16 = $s0
+                            1, 0, 0, 0, 1, //17 = $s1
+                            1, 0, 0, 1, 0, //18 = $s2
+                            1, 0, 0, 1, 1, //19 = $s3
+                            1, 0, 1, 0, 0, //20 = $s4
+                            1, 0, 1, 0, 1, //21 = $s5
+                            1, 0, 1, 1, 0, //22 = $s6
+                            1, 0, 1, 1, 1, //23 = $s7
+                            1, 1, 0, 0, 0, //24 = $t8
+                            1, 1, 0, 0, 1, //25 = $t9
+                            1, 1, 0, 1, 0, //26 = $k0
+                            1, 1, 0, 1, 1, //27 = $k1
+                            1, 1, 1, 0, 0, //28 = $gp
+                            1, 1, 1, 0, 1, //29 = $sp
+                            1, 1, 1, 1, 0, //30 = $fp
+                            1, 1, 1, 1, 1};//31 = $ra
 
 
+/*
 void escreveRegistrador(unsigned char *reg)
 {
 	unsigned int i = 0;
@@ -73,7 +69,7 @@ void escreveRegistrador(unsigned char *reg)
 		printf("%c", reg[i] + 48);
 	}
 	puts("\n");
-}
+}*/
 
 /*
 Função auxiliar que converte uma cadeia de caracteres em minúsculo
@@ -86,8 +82,12 @@ void toLowerCase(char *s)
 	}
 }
 
+/*
+Função que copia um subcadeia de bits de um vetor para outro.
+*/
 void copiaBits(unsigned char *origem, unsigned char inicio, unsigned char qtd, unsigned char *destino, unsigned char inicioDestino)
 {
+	//Tive que implementar essa função pois o memcpy não estava funcionando corretamente.
 	unsigned char i = 0;
 	unsigned char fim = inicio + qtd;
 	unsigned char destinoB = inicioDestino;
@@ -98,8 +98,12 @@ void copiaBits(unsigned char *origem, unsigned char inicio, unsigned char qtd, u
 	}
 }
 
+/*
+Função que copia um subcadeia de caracteres de um vetor para outro.
+*/
 void copiaString(char *origem, char *destino, unsigned char inicio, unsigned char qtd)
 {
+	//Tive que implementar essa função pois o strncpy não estava funcionando corretamente.
 	unsigned char i = 0;
 	unsigned char fim = inicio + qtd;
 	unsigned char destinoC = 0;
@@ -175,7 +179,6 @@ unsigned char getRegistradorBytes(char *registrador, unsigned char *bytes)
 	
 	return 0;
 }
-
 
 /*
 Separa a instrução continda em *linha
@@ -258,17 +261,18 @@ unsigned char processarLinha(char *linha)
 	unsigned char bRS[5], bRT[5], bRD[5];
 	unsigned char i = 0;
 	
-	printf("%s", linha);
+	//TODO: Retirar
+	printf("Processando linha: %s", linha);
 	
 	inicializaPalavra();
 	divideInstrucao(linha, instrucao, op1, op2, op3);
-	printf("Ins: '%s'\nOp1: '%s'\nOp2: '%s'\nOp3: '%s'\n", instrucao, op1, op2, op3);
-	//printf("add? %d\n", strcmp(instrucao, "add"));
+	
+	//TODO: Retirar
+	printf("Resultado: Ins = '%s'\tOp1 = '%s'\tOp2 = '%s'\tOp3 = '%s'\n", instrucao, op1, op2, op3);
 
 	//Verifica se a instrução é do tipo R
 	for(i = 0; i<8; i++)
 	{
-		printf("Comparando %s e %s\n", instrucao, R_MNE[i]);
 		if(strcmp(instrucao, R_MNE[i]) == 0)
 		{
 			//Tipo R: op = 0; rs = op2; rt = op3; rd = op1; shmat = 0; func  = 6 bits;
@@ -321,14 +325,14 @@ int main(int argc, char **argv) {
 		return errno;
 	}
 	
-	//Trata o argumento --newline //somente na posição 4!
+	//Trata o argumento --newline (somente na posição 4!)
 	if(argc > 3)
 	{
 		//Só seta o valor 1 se a strcmp retornar 0
 		newLine = !strcmp(argv[3], "--newline");	
 	}
 	
-	while(fgets(linha, 100, fInput) != NULL )
+	while(fgets(linha, 100, fInput) != NULL)
 	{
 		processarLinha(linha);
 		escrevePalavra();
