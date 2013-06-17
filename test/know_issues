@@ -1,0 +1,4 @@
+Know Issues:
+
+Atualmente não estão sendo tratadas linhas vazias.
+Não foram implementados labels para as instruções de salto (é necessário passar o endereço na instrução).

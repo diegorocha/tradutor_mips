@@ -19,6 +19,20 @@ unsigned char R_FUNC[8][6] = {0, 0, 0, 0, 0, 0, //00 = sll
 															1, 0, 0, 1, 0, 0, //36 = and
 															1, 0, 0, 1, 0, 1, //37 = or
 															1, 0, 1, 0, 1, 0};//42 = slt
+unsigned int R_NO_SHAMT = 0;
+
+//Instruções Tipo I
+char I_MNE[5][5] = {"beq", "bne", "addi", "lw", "sw"};
+unsigned char I_OPCODE[5][6] = {0, 0, 0, 1, 0, 0, //04 = beq
+															  0, 0, 0, 1, 0, 1, //05 = bne
+															  0, 0, 1, 0, 0, 0, //08 = addi
+															  1, 0, 0, 0, 1, 1, //35 = lw
+															  1, 0, 1, 0, 1, 1};//43 = sw
+
+//Instruções Tipo J
+char J_MNE[2][4] = {"j", "jal"};
+unsigned char J_OPCODE[5][6] = {0, 0, 0, 0, 1, 0, //02 = j
+															  0, 0, 0, 0, 1, 1};//03 = jal
 
 
 //Registradores [num_reg][bytes]
@@ -117,7 +131,6 @@ void copiaString(char *origem, char *destino, unsigned char inicio, unsigned cha
 
 void inicializaPalavra()
 {
-	//Inicializa os 32 bytes do vetor com o valor 0
 	memset(palavra, 0, 32);
 }
 
@@ -128,27 +141,35 @@ void escrevePalavra()
 	{
 		//Adiciona 48 ao valor contido no vetor, para ser representado como o ASCII '0' ou '1'
 		fprintf(fOutput, "%c", palavra[i] + 48);
+		printf("%c", palavra[i]+48);
 	}
 	if(newLine)
 	{
 		fputs("\n", fOutput);
 	}
+	printf("\n");
 }
 
-/*
-Escreve o valor contido em imediato nos últimos bits da palavra
-*/
-unsigned char setImediato(int imediato)
+void setBinario(unsigned int value, unsigned int bitInicial)
 {
-	unsigned char bit = 31;
-	int num = imediato;
+	unsigned char bit = bitInicial;
 	//Converte para binario atraves das divisoes sucessivas
-	while(imediato > 0)
+	while(value > 0)
 	{
-		palavra[bit] = imediato % 2;
-		imediato /= 2;
+		palavra[bit] = value % 2;
+		value /= 2;
 		bit--;
 	}
+}
+
+void setShamt(unsigned int shamt)
+{
+	setBinario(shamt, 25);
+}
+
+void setImediato(unsigned int imediato)
+{
+	setBinario(imediato, 31);
 }
 
 /*
@@ -210,7 +231,7 @@ void divideInstrucao(char *linha, char *instrucao, char *op1, char *op2, char *o
 		fc++;
 	}
 	lc = fc + 1;
-	while(linha[lc] && linha[lc] != ',' && linha[lc] != ' ')
+	while(linha[lc] && linha[lc] != ',' && linha[lc] != ' ' && linha[lc] != '\n')
 	{
 		lc++;
 	}
@@ -243,12 +264,27 @@ void divideInstrucao(char *linha, char *instrucao, char *op1, char *op2, char *o
 	copiaString(linha, op3, fc, lc - fc);
 }
 
-void palavraTipoR(unsigned char *rs, unsigned char *rt, unsigned char *rd, unsigned char *func)
+void palavraTipoR(unsigned char *rs, unsigned char *rt, unsigned char *rd, unsigned int shamt, unsigned char *func)
 {
 		copiaBits(rs, 0, 5, palavra, 6);
 		copiaBits(rt, 0, 5, palavra, 11);
 		copiaBits(rd, 0, 5, palavra, 16);
+		setShamt(shamt);
 		copiaBits(func, 0, 6, palavra, 26);
+}
+
+void palavraTipoI(unsigned char *opCode, unsigned char *rs, unsigned char *rt, unsigned int imediato)
+{
+		copiaBits(opCode, 0, 6, palavra, 0);
+		copiaBits(rs, 0, 5, palavra, 6);
+		copiaBits(rt, 0, 5, palavra, 11);
+		setImediato(imediato);
+}
+
+void palavraTipoJ(unsigned char *opCode, unsigned int imediato)
+{
+		copiaBits(opCode, 0, 6, palavra, 0);
+		setImediato(imediato);
 }
 
 /*
@@ -260,42 +296,155 @@ unsigned char processarLinha(char *linha)
 	char instrucao[10], op1[5], op2[5], op3[5];
 	unsigned char bRS[5], bRT[5], bRD[5];
 	unsigned char i = 0;
+	unsigned int imediato = 0;
+	unsigned int shamt = 0;
+	unsigned int retorno = 0; //flag erro
 	
-	//TODO: Retirar
-	printf("Processando linha: %s", linha);
+	printf("%s", linha);
 	
 	inicializaPalavra();
 	divideInstrucao(linha, instrucao, op1, op2, op3);
 	
-	//TODO: Retirar
-	printf("Resultado: Ins = '%s'\tOp1 = '%s'\tOp2 = '%s'\tOp3 = '%s'\n", instrucao, op1, op2, op3);
+	//printf("Resultado: Ins = '%s'\tOp1 = '%s'\tOp2 = '%s'\tOp3 = '%s'\n\n", instrucao, op1, op2, op3);
 
 	//Verifica se a instrução é do tipo R
 	for(i = 0; i<8; i++)
 	{
 		if(strcmp(instrucao, R_MNE[i]) == 0)
 		{
-			//Tipo R: op = 0; rs = op2; rt = op3; rd = op1; shmat = 0; func  = 6 bits;
-			//rs
-			if(!getRegistradorBytes(op2, bRS))
+			retorno = 1; //Identificou a instrução
+			if(i > 2)
 			{
-				return 0;
-			}
+				//Tipo R: op = 0; rs = op2; rt = op3; rd = op1; shmat = 0; func  = R_FUNC[i]; (sll, srl e jr são exceções)
+				//rs
+				if(!getRegistradorBytes(op2, bRS))
+				{
+					return 0;
+				}
 
-			//rt
-			if(!getRegistradorBytes(op3, bRT))
-			{
-				return 0;
+				//rt
+				if(!getRegistradorBytes(op3, bRT))
+				{
+					return 0;
+				}
+			
+				//rd
+				if(!getRegistradorBytes(op1, bRD))
+				{
+					return 0;
+				}
+				
+				//Com rs, rt, rt e sem shamt
+				palavraTipoR(bRS, bRT, bRD, R_NO_SHAMT, R_FUNC[i]);
 			}
-
-			//rd
-			if(!getRegistradorBytes(op1, bRD))
+			else
 			{
-				return 0;
+				//Exceções
+				if(i == 2)
+				{
+					//jr: op = 0; rs = op1; rt = 0; rd = 0; shmat = 0; func  = R_FUNC[i];
+					//rs = op1
+					if(!getRegistradorBytes(op1, bRS))
+					{
+						return 0;
+					}
+					palavraTipoR(bRS, REG[0], REG[0], R_NO_SHAMT, R_FUNC[i]);
+				}
+				else
+				{
+					//sll e srl: op = 0; rs = op2; rt = 0; rd = op1; shmat = op3; func  = R_FUNC[i];
+					//rs = op2
+					if(!getRegistradorBytes(op2, bRS))
+					{
+						return 0;
+					}
+				
+					//rd = op1
+					if(!getRegistradorBytes(op1, bRD))
+					{
+						return 0;
+					}
+					
+					//shamt
+					sscanf(op3, "%d", &shamt);
+					if(shamt > 31)
+					{
+						return 0;
+					}
+					
+					palavraTipoR(bRS, REG[0], bRD, shamt, R_FUNC[i]);
+				}
 			}
-			palavraTipoR(bRS, bRT, bRD, R_FUNC[i]);
+			break;
 		}
 	}
+	
+	//Verifica se a instrução é do tipo I
+	for(i = 0; i<5; i++)
+	{
+		if(strcmp(instrucao, I_MNE[i]) == 0)
+		{		
+			retorno = 1; //Identificou a instrução
+			if(i < 3)
+			{
+				//Tipo I (regular): op = I_OPCODE[i]; rs = op2; rt = op1; imediato = op3 (lw e sw são exceções)
+
+				//rs
+				if(!getRegistradorBytes(op2, bRS))
+				{
+					return 0;
+				}
+						
+				//imediato
+				sscanf(op3, "%d", &imediato);
+			}
+			else
+			{
+				//lw/sw : op = I_OPCODE[i]; rs = op3; rt = op1; imediato = op2
+
+				//rs
+				if(!getRegistradorBytes(op3, bRS))
+				{
+					return 0;
+				}
+						
+				//imediato
+				sscanf(op2, "%d", &imediato);
+			}
+			
+			//rt
+			if(!getRegistradorBytes(op1, bRT))
+			{
+				return 0;
+			}
+
+			if(imediato > 65535)
+			{
+				return 0;
+			}
+
+			palavraTipoI(I_OPCODE[i], bRS, bRT, imediato);
+			break;
+		}
+	}
+	
+	//Verifica se a instrução é do tipo J
+	for(i = 0; i<2; i++)
+	{
+		if(strcmp(instrucao, J_MNE[i]) == 0)
+		{
+			retorno = 1; //Identificou a instrução
+			//imediato
+			sscanf(op1, "%d", &imediato);
+			if(imediato > 67108863)
+			{
+				return 0;
+			}
+			palavraTipoJ(J_OPCODE[i], imediato);
+		}
+	}
+	
+	return retorno;
 }
 
 int main(int argc, char **argv) {
@@ -334,8 +483,15 @@ int main(int argc, char **argv) {
 	
 	while(fgets(linha, 100, fInput) != NULL)
 	{
-		processarLinha(linha);
-		escrevePalavra();
+		if(processarLinha(linha))
+		{
+			escrevePalavra();
+		}
+		else
+		{
+			fprintf(stderr, "Não foi possível processar a instrução %s%s\n", linha, strerror(errno));
+			return 1;
+		}
 	}
 	fclose(fInput);
 	fclose(fOutput);
