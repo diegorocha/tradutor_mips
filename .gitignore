@@ -1,3 +1,4 @@
 *~
 *.save
 bin/*
+test/output
