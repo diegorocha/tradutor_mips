@@ -33,7 +33,7 @@ debug: build-debug
 		gdb bin/tradutorMIPS
 
 run-test: build
-		bin/tradutorMIPS test/input.asm test/ouput --newline
+		bin/tradutorMIPS test/input.asm test/output --newline
 
 debug-test: build-debug
-		gdb --args bin/tradutorMIPS test/input.asm test/ouput --newline
+		gdb --args bin/tradutorMIPS test/input.asm test/output --newline

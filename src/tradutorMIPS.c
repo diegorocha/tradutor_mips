@@ -3,27 +3,24 @@
 #include <errno.h>
 #include "lib/libMIPS.h"
 
-FILE *fInput;
-FILE *fOutput;
-unsigned char newLine = 0;
-
-void escrevePalavra()
+void escrevePalavra(FILE *fOutput, unsigned char newLine)
 {
 	unsigned char i = 0;
 	for(i=0; i<32; i++)
 	{
 		//Adiciona 48 ao valor contido no vetor, para ser representado como o ASCII '0' ou '1'
 		fprintf(fOutput, "%c", palavra[i] + 48);
-		printf("%c", palavra[i]+48);
 	}
 	if(newLine)
 	{
 		fputs("\n", fOutput);
 	}
-	printf("\n");
 }
 
 int main(int argc, char **argv) {
+	FILE *fInput;
+	FILE *fOutput;
+	unsigned char newLine = 0;
 	char linha[100];
 	char inputFilePath;
 	
@@ -61,7 +58,7 @@ int main(int argc, char **argv) {
 	{
 		if(processarInstrucao(linha))
 		{
-			escrevePalavra();
+			escrevePalavra(fOutput, newLine);
 		}
 		else
 		{
@@ -71,5 +68,6 @@ int main(int argc, char **argv) {
 	}
 	fclose(fInput);
 	fclose(fOutput);
+	printf("%s\n", strerror(errno));
 	return 0;
 };
