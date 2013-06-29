@@ -1,3 +1,4 @@
+add $t5, $s5, $s3
 sub $t5, $s5, $s3
 slt $t0,$s1,$s7
 addi $fp, $t8, 2106

@@ -5,12 +5,18 @@ Contem funções necessárias para a tradução de uma instrução em bits.
 
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 #include "libMIPS.h"
 #include "MIPSconst.h"
 #include "arrayUtils.h"
 
+#define INST_NAO_SUP 200
+#define REG_INVAL 201
+#define IME_M_GRANDE 202
+
 //Variável globais
 unsigned char palavra[32];
+char message[30];
 
 void inicializarPalavra()
 {
@@ -37,6 +43,22 @@ void setShamt(unsigned int shamt)
 void setImediato(unsigned int imediato)
 {
 	setBinario(imediato, 31);
+}
+
+char *libMipsErrorMessage(int errorNo)
+{
+	strcpy(message, "");
+	switch (errorNo){
+		case INST_NAO_SUP:
+			strcpy(message, "Instrução não suportada"); break;
+		case REG_INVAL:
+			strcpy(message, "Registrador inválido"); break;
+		case IME_M_GRANDE:
+			strcpy(message, "Imediato muito grande"); break;
+		default:
+			strcpy(message, "Erro desconhecido"); break;
+	}
+	return message;
 }
 
 /*
@@ -167,12 +189,8 @@ unsigned char processarInstrucao(char *linha)
 	unsigned int shamt = 0;
 	unsigned int retorno = 0; //flag erro
 	
-	//printf("%s", linha);
-	
 	inicializarPalavra();
 	divideInstrucao(linha, instrucao, op1, op2, op3);
-	
-	//printf("Resultado: Ins = '%s'\tOp1 = '%s'\tOp2 = '%s'\tOp3 = '%s'\n\n", instrucao, op1, op2, op3);
 
 	//Verifica se a instrução é do tipo R
 	for(i = 0; i<8; i++)
@@ -186,18 +204,21 @@ unsigned char processarInstrucao(char *linha)
 				//rs
 				if(!getRegistradorBytes(op2, bRS))
 				{
+					errno = REG_INVAL;
 					return 0;
 				}
 
 				//rt
 				if(!getRegistradorBytes(op3, bRT))
 				{
+					errno = REG_INVAL;
 					return 0;
 				}
 			
 				//rd
 				if(!getRegistradorBytes(op1, bRD))
 				{
+					errno = REG_INVAL;
 					return 0;
 				}
 				
@@ -213,6 +234,7 @@ unsigned char processarInstrucao(char *linha)
 					//rs = op1
 					if(!getRegistradorBytes(op1, bRS))
 					{
+						errno = REG_INVAL;
 						return 0;
 					}
 					instrucaoTipoR(bRS, REG[0], REG[0], R_NO_SHAMT, R_FUNC[i]);
@@ -223,12 +245,14 @@ unsigned char processarInstrucao(char *linha)
 					//rs = op2
 					if(!getRegistradorBytes(op2, bRS))
 					{
+						errno = REG_INVAL;
 						return 0;
 					}
 				
 					//rd = op1
 					if(!getRegistradorBytes(op1, bRD))
 					{
+						errno = REG_INVAL;
 						return 0;
 					}
 					
@@ -236,6 +260,7 @@ unsigned char processarInstrucao(char *linha)
 					sscanf(op3, "%d", &shamt);
 					if(shamt > 31)
 					{
+						errno = IME_M_GRANDE;
 						return 0;
 					}
 					
@@ -259,6 +284,7 @@ unsigned char processarInstrucao(char *linha)
 				//rs
 				if(!getRegistradorBytes(op2, bRS))
 				{
+					errno = REG_INVAL;
 					return 0;
 				}
 						
@@ -272,6 +298,7 @@ unsigned char processarInstrucao(char *linha)
 				//rs
 				if(!getRegistradorBytes(op3, bRS))
 				{
+					errno = REG_INVAL;
 					return 0;
 				}
 						
@@ -282,11 +309,13 @@ unsigned char processarInstrucao(char *linha)
 			//rt
 			if(!getRegistradorBytes(op1, bRT))
 			{
+				errno = REG_INVAL;
 				return 0;
 			}
 
 			if(imediato > 65535)
 			{
+				errno = IME_M_GRANDE;
 				return 0;
 			}
 
@@ -305,11 +334,16 @@ unsigned char processarInstrucao(char *linha)
 			sscanf(op1, "%d", &imediato);
 			if(imediato > 67108863)
 			{
+				errno = IME_M_GRANDE;
 				return 0;
 			}
 			instrucaoTipoJ(J_OPCODE[i], imediato);
 		}
 	}
-
+	
+	if(retorno == 0)
+	{
+		errno = INST_NAO_SUP;
+	}
 	return retorno;
 }
