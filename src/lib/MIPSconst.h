@@ -14,7 +14,7 @@ extern const unsigned char I_OPCODE[5][6];
 
 //Instruções Tipo J
 extern const char J_MNE[2][4];
-extern const unsigned char J_OPCODE[5][6];
+extern const unsigned char J_OPCODE[2][6];
 
 //Registradores [num_reg][bytes]
 extern const char REG_MNE[32][6];

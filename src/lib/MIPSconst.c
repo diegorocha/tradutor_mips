@@ -31,7 +31,7 @@ const unsigned char I_OPCODE[5][6] = {0, 0, 0, 1, 0, 0, //04 = beq
 //Instruções Tipo J
 const char J_MNE[2][4] = {"j", "jal"};
 
-const unsigned char J_OPCODE[5][6] = {0, 0, 0, 0, 1, 0, //02 = j
+const unsigned char J_OPCODE[2][6] = {0, 0, 0, 0, 1, 0, //02 = j
 															        0, 0, 0, 0, 1, 1};//03 = jal
 
 
